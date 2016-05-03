@@ -9,6 +9,7 @@ var dx = [1, 1, 1, 0, -1, -1, -1, 0];
 var dy = [1, 0, -1, -1, -1, 0, 1, 1];
 var n = 6;
 var m = 9;
+var mineCount = 0;
 var cellType = {
   LOCK : "锁",
   MINE : "地雷",
@@ -32,11 +33,19 @@ function error(msg) {
   $("#message").html(msg);
 }
 
+function updateMineCount() {
+  mineCount += 1;
+  $("#mineCount").html(mineCount);
+}
+
 function mark(btn) {
   var mark = $("input[name=mark]:checked").val();
   if ("mine" == mark) {
-    btn.innerHTML = cellType.MINE;
-    btn.className = "btn-danger col-xs-1";
+    if (btn.innerHTML != cellType.MINE) {
+      btn.innerHTML = cellType.MINE;
+      btn.className = "btn-danger col-xs-1";
+      updateMineCount();
+    }
   } else if ("lock" == mark) {
     btn.innerHTML = cellType.LOCK;
     btn.className = "btn-warning col-xs-1";
@@ -168,6 +177,7 @@ function setMine(x, y) {
   }
   cell.html(cellType.MINE);
   cell[0].className = "btn-danger col-xs-1";
+  updateMineCount();
   return true;
 }
 
@@ -293,5 +303,7 @@ function restart() {
       getCell(i, j).html(cellType.UNKNOWN);
     }
   }
+  mineCount = -1;
+  updateMineCount();
   hint("游戏已经重新开始");
 }
