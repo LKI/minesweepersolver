@@ -89,6 +89,26 @@ function getSub(cellsA, cellsB) {
   return cb;
 }
 
+function getInter(cellsA, cellsB) {
+  var inter = [];
+  var outer = [];
+  for (var i = 0; i < cellsA.length; i++) {
+    var hasCell = false;
+    for (var j = 0; j < cellsB.length; j++) {
+      if (cellsA[i][0] == cellsB[j][0] && cellsA[i][1] == cellsB[j][1]) {
+        hasCell = true;
+        break;
+      }
+    }
+    if (hasCell) {
+      inter.push(cellsA[i]);
+    } else {
+      outer.push(cellsA[i]);
+    }
+  }
+  return [inter, outer];
+}
+
 function getMineGroup(x, y) {
   var cells = [];
   var mines = Number(getCell(x, y).html());
@@ -159,7 +179,7 @@ function mineSolve(mineGroups, count) {
   warn("正在进行第" + count + "次雷区扫描，请稍等...");
   var newGroups = [];
   var solved = false;
-  mineGroups = mineGroups.sort(function (a,b) {return a.mines - b.mines});
+  mineGroups = mineGroups.sort(function (a,b) {return a.mines - b.mines || a.cells.length - b.cells.length});
   for (var i = 0; i < mineGroups.length; i++) {
     var mineGroup = mineGroups[i];
     mineGroup = refreshMineGroup(mineGroup);
@@ -173,7 +193,6 @@ function mineSolve(mineGroups, count) {
         }
       }
       solved = true;
-      newGroups.push(mineGroup);
     } else if (cells.length == mines) {
       for (var j = 0; j < cells.length; j++) {
         if (!setMine(cells[j][0], cells[j][1])) {
@@ -181,15 +200,35 @@ function mineSolve(mineGroups, count) {
           return false;
         }
       }
-      newGroups.push(mineGroup);
     } else {
       var divided = false;
       for (var j = 0; j < i; j++) {
+        // 判断雷区是否为子集
         var sub = getSub(mineGroups[j].cells, cells);
         if (null != sub && sub.length > 0) {
           newGroups.push(new MineGroup(mineGroup.x, mineGroup.y, sub, mines - mineGroups[j].mines));
           divided = true;
           break;
+        }
+        // 判断雷区交集
+        var interGroup = getInter(cells, mineGroups[j].cells);
+        var inter = interGroup[0];
+        var outer = interGroup[1];
+        if (outer.length > 0) {
+          var maxInterMines = Math.min(inter.length, mineGroups[j].mines);
+          if (mines - maxInterMines == outer.length) {
+            newGroups.push(new MineGroup(mineGroup.x, mineGroup.y, inter, maxInterMines));
+            newGroups.push(new MineGroup(mineGroup.x, mineGroup.y, outer, mines - maxInterMines));
+            divided = true;
+            break;
+          };
+          var minInterMines = Math.max(0, inter.length + mineGroups[j].mines - mineGroups[j].cells);
+          if (mines - minInterMines == outer.length) {
+            newGroups.push(new MineGroup(mineGroup.x, mineGroup.y, inter, mines));
+            newGroups.push(new MineGroup(mineGroup.x, mineGroup.y, outer, 0));
+            divided = true;
+            break;
+          }
         }
       }
       if (!divided) {
@@ -197,7 +236,8 @@ function mineSolve(mineGroups, count) {
       }
     }
   }
-  var diff = false;
+  console.log(mineGroups, newGroups);
+  var diff = (mineGroups.length != newGroups.length);
   for (var i = 0; i < newGroups.length; i++) {
     diff = diff || (newGroups[i].cells.length != mineGroups[i].cells.length);
   }
@@ -236,7 +276,6 @@ MineSweeper.prototype.analyze = function() {
       }
     }
   }
-  console.log(mineGroups);
   if (mineSolve(mineGroups, 1)) {
     hint("扫描完成，绿色的“点我”格子就是安全的，快去地雷游戏里点开它吧。");
   }
