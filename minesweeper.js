@@ -28,24 +28,31 @@ function warn(msg) {
   $("#message").html(msg);
 }
 
+function cellError(x, y) {
+  error("第" + (x+1) + "行第" + (y+1) + "列的格子错了，扫描终止。");
+}
+
 function error(msg) {
   $("#message")[0].className = "lead col-xs-9 bg-danger";
   $("#message").html(msg);
 }
 
-function updateMineCount() {
-  mineCount += 1;
+function updateMineCount(i) {
+  mineCount += i || 1;
   $("#mineCount").html(mineCount);
 }
 
 function mark(btn) {
   var mark = $("input[name=mark]:checked").val();
+  if (btn.innerHTML == cellType.MINE && mark != "mine") {
+    updateMineCount(-1);
+  }
+  if (btn.innerHTML != cellType.MINE && mark == "mine") {
+    updateMineCount();
+  }
   if ("mine" == mark) {
-    if (btn.innerHTML != cellType.MINE) {
-      btn.innerHTML = cellType.MINE;
-      btn.className = "btn-danger col-xs-1";
-      updateMineCount();
-    }
+    btn.innerHTML = cellType.MINE;
+    btn.className = "btn-danger col-xs-1";
   } else if ("lock" == mark) {
     btn.innerHTML = cellType.LOCK;
     btn.className = "btn-warning col-xs-1";
@@ -255,7 +262,7 @@ function mineSolve(mineGroups, count) {
     solved = mineSolve(newGroups, count + 1) || solved;
   }
   if (!solved) {
-    warn("根据当前信息不能100%确定地雷位置，你要猜地雷在哪了。");
+    warn("根据雷阵分布不能100%确定地雷位置。");
   }
   return solved;
 }
@@ -276,8 +283,8 @@ MineSweeper.prototype.analyze = function() {
       var cell = getCell(i, j);
       if (0 <= cell.html() && cell.html() <= 8) {
         var mineGroup = getMineGroup(i, j);
-        if (mineGroup.cells.length < mineGroup.mines) {
-          error("第" + (i+1) + "行第" + (j+1) + "列的格子错了，扫描不下去。");
+        if (mineGroup.mines < 0 || mineGroup.cells.length < mineGroup.mines) {
+          cellError(i, j);
           return;
         }
         if (0 < mineGroup.cells.length) {
